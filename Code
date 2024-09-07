@@ -1,0 +1,89 @@
+#include <Servo.h>
+
+int ang1 = 0;
+int ang2 = 180;
+
+Servo servo_left;
+Servo servo_right;
+Servo myServo;
+
+unsigned long previousMillis = 0;  // Stores the last time the servo was updated
+const long interval = 20;        // Interval between each servo movement (in milliseconds)
+const long delayInterval = 1 * 2 * 1000;  // 15 minutes in milliseconds
+bool rotationComplete = false;  // Flag to check if rotation is complete
+
+int analogPin = A0;   // Analog input pin for time-varying voltage
+int analogValue = 0;  // Variable to store the current analog value
+int maxAnalogValue = 0;// Variable to store the maximum analog value
+int maxang1 = 0;
+int maxang2 = 0;
+  int servo_pin=8;
+  int angle=150;
+
+int outputPins[8] = {7, 6, 5, 4, 3, 2, 1, 0};
+
+void setup()
+{
+  servo_left.attach(9);
+  servo_right.attach(10);
+  myServo.attach(servo_pin);
+  
+  for (int i = 0; i < 8; i++) {
+    pinMode(outputPins[i], OUTPUT);
+  }
+}
+
+void loop()
+{
+   unsigned long currentMillis = millis();  // Get the current time
+
+  // Read the analog voltage and update the maximum value if necessary
+  analogValue = analogRead(analogPin);
+  if (analogValue > maxAnalogValue) {
+    maxAnalogValue = analogValue;
+    maxang1 = ang1;
+    maxang2 = ang2;
+  }
+
+  if (!rotationComplete) {
+    // Check if the interval has passed and the rotation is not complete
+    if (currentMillis - previousMillis >= interval) {
+      previousMillis = currentMillis;  // Save the current time
+
+      servo_left.write(ang1);  // Set the servo to the current angle
+      servo_right.write(ang2);  // Set the servo to the current angle
+      
+
+      ang1 += 1;  // Increment the angle by 1 degrees
+      ang2 -= 1;  // Increment the angle by 1 degrees
+      
+
+      // If the angle reaches 180, stop the rotation
+      if (ang1 >= 180) {
+        ang1 = 180;  // Ensure angle is exactly 180
+        ang2 = 0;
+        rotationComplete = true;  // Set the rotation complete flag
+        previousMillis = currentMillis;  // Reset the timer for the delay
+
+        // Output the maximum analog value and reset it
+        Serial.print("Maximum Analog Value: ");
+        Serial.println(maxAnalogValue);
+        for (int i = 0; i < 8; i++) {
+          digitalWrite(outputPins[i], bitRead(maxang1, i));
+        }
+        maxAnalogValue = 0;  // Reset the maximum value for the next cycle
+      }
+    }
+  } else {
+    // Check if 15 minutes have passed since the rotation completed
+    if (currentMillis - previousMillis >= delayInterval) {
+      ang1 = 0;  // Reset the angle to 0
+      ang2 = 180;
+      rotationComplete = false;  // Reset the rotation flag
+      previousMillis = currentMillis;  // Reset the timer for the next cycle
+    }
+  }
+
+    myServo.write(angle);
+    delay(1000);
+  }
